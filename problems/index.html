@@ -20,11 +20,25 @@
 </nav>
 
 <!-- ═══════════ 题目 ═══════════ -->
-<div class="section">
-  <h2>团队题库</h2>
-  <p class="sub">题目均指向洛谷题库对应页面，点击即可跳转作答。</p>
-  <div class="problem-list" id="problem-list"></div>
-</div>
+<main class="section collection-section">
+  <header class="page-banner">
+    <div class="page-banner-copy">
+      <span class="page-eyebrow"><span class="kicker-dot"></span> PRACTICE · PROGRESS</span>
+      <h1>团队题库</h1>
+      <p>从基础到进阶，找到下一道值得挑战的题。</p>
+    </div>
+    <div class="page-emblem problem-emblem" aria-hidden="true"><span>{ }</span><i></i><i></i><i></i></div>
+  </header>
+  <div class="collection-toolbar">
+    <label class="search-box">
+      <span aria-hidden="true">⌕</span>
+      <input id="problem-search" type="search" aria-label="搜索题号、题目或难度" placeholder="搜索题号、题目或难度…" autocomplete="off">
+    </label>
+    <div class="collection-count"><strong id="problem-count">0</strong><span>道题目</span></div>
+  </div>
+  <div class="difficulty-filters" id="difficulty-filters" role="group" aria-label="按难度筛选"></div>
+  <div class="problem-list" id="problem-list" aria-live="polite"></div>
+</main>
 
 <footer>
   hywOI · 洛谷团队 <a href="https://www.luogu.com.cn/team/134164" target="_blank" rel="noopener">www.luogu.com.cn/team/134164</a>
