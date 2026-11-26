@@ -35,6 +35,117 @@ function renderIntro(){
     </div>`).join("");
 }
 
+function renderHomeStats(){
+  const stats = [
+    ["stat-problems", problems.length],
+    ["stat-members", members.length],
+    ["stat-topics", introCards.length],
+  ];
+  stats.forEach(([id, count]) => {
+    const value = document.getElementById(id);
+    if(value) value.textContent = count;
+  });
+}
+
+function initHeroBackground(){
+  const canvas = document.querySelector(".hero-canvas");
+  const hero = canvas && canvas.closest(".hero");
+  const context = canvas && canvas.getContext("2d");
+  if(!canvas || !hero || !context) return;
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pointer = { x: -1000, y: -1000 };
+  let particles = [];
+  let width = 0;
+  let height = 0;
+  let animationFrame = 0;
+
+  function resize(){
+    window.cancelAnimationFrame(animationFrame);
+    const bounds = hero.getBoundingClientRect();
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    width = bounds.width;
+    height = bounds.height;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+    const count = Math.min(78, Math.max(34, Math.round(width * height / 11500)));
+    particles = Array.from({length: count}, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - .5) * .22,
+      vy: (Math.random() - .5) * .22,
+      radius: Math.random() * 1.5 + .7,
+    }));
+    draw();
+  }
+
+  function draw(){
+    context.clearRect(0, 0, width, height);
+    const linkDistance = Math.min(150, width * .16);
+
+    particles.forEach((particle, index) => {
+      if(!reducedMotion){
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        if(particle.x < 0 || particle.x > width) particle.vx *= -1;
+        if(particle.y < 0 || particle.y > height) particle.vy *= -1;
+
+        const dx = particle.x - pointer.x;
+        const dy = particle.y - pointer.y;
+        const distance = Math.hypot(dx, dy);
+        if(distance < 110 && distance > 0){
+          particle.x += dx / distance * .35;
+          particle.y += dy / distance * .35;
+        }
+      }
+
+      for(let otherIndex = index + 1; otherIndex < particles.length; otherIndex++){
+        const other = particles[otherIndex];
+        const distance = Math.hypot(particle.x - other.x, particle.y - other.y);
+        if(distance < linkDistance){
+          context.beginPath();
+          context.moveTo(particle.x, particle.y);
+          context.lineTo(other.x, other.y);
+          context.strokeStyle = `rgba(59, 143, 204, ${.16 * (1 - distance / linkDistance)})`;
+          context.lineWidth = 1;
+          context.stroke();
+        }
+      }
+
+      context.beginPath();
+      context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+      context.fillStyle = "rgba(54, 139, 202, .42)";
+      context.fill();
+    });
+
+    if(!reducedMotion) animationFrame = window.requestAnimationFrame(draw);
+  }
+
+  function onVisibilityChange(){
+    if(document.hidden){
+      window.cancelAnimationFrame(animationFrame);
+    } else if(!reducedMotion){
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(draw);
+    }
+  }
+
+  hero.addEventListener("pointermove", event => {
+    const bounds = hero.getBoundingClientRect();
+    pointer.x = event.clientX - bounds.left;
+    pointer.y = event.clientY - bounds.top;
+  }, {passive:true});
+  hero.addEventListener("pointerleave", () => {
+    pointer.x = -1000;
+    pointer.y = -1000;
+  }, {passive:true});
+  window.addEventListener("resize", resize, {passive:true});
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  resize();
+}
+
 function renderProblems(){
   const box = document.getElementById("problem-list");
   if(!box) return;
@@ -80,5 +191,7 @@ function closeModal(){ document.getElementById("modal-mask").classList.remove("o
 document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeModal(); });
 
 renderIntro();
+renderHomeStats();
+initHeroBackground();
 renderProblems();
 renderMembers();
