@@ -149,27 +149,79 @@ function initHeroBackground(){
 function renderProblems(){
   const box = document.getElementById("problem-list");
   if(!box) return;
-  box.innerHTML = problems.map(p=>`
-    <a class="problem-item" href="https://www.luogu.com.cn/problem/${p.pid}" target="_blank" rel="noopener">
-      <span class="pid">${p.pid}</span>
-      <span class="p-title">${p.title}</span>
-      <span class="difficulty diff-${p.difficulty}">${p.difficulty}</span>
-    </a>`).join("");
+  const search = document.getElementById("problem-search");
+  const filters = document.getElementById("difficulty-filters");
+  const count = document.getElementById("problem-count");
+  let activeDifficulty = "全部";
+
+  if(filters){
+    const difficulties = ["全部", ...new Set(problems.map(problem => problem.difficulty))];
+    filters.innerHTML = difficulties.map(difficulty =>
+      `<button class="filter-chip" type="button" data-difficulty="${difficulty}" aria-pressed="${difficulty === activeDifficulty}">${difficulty}</button>`
+    ).join("");
+    filters.addEventListener("click", event => {
+      const button = event.target.closest("[data-difficulty]");
+      if(!button) return;
+      activeDifficulty = button.dataset.difficulty;
+      filters.querySelectorAll(".filter-chip").forEach(chip => {
+        chip.setAttribute("aria-pressed", String(chip === button));
+      });
+      update();
+    });
+  }
+
+  function update(){
+    const query = search ? search.value.trim().toLocaleLowerCase() : "";
+    const visibleProblems = problems.filter(problem => {
+      const matchesDifficulty = activeDifficulty === "全部" || problem.difficulty === activeDifficulty;
+      const searchableText = `${problem.pid} ${problem.title} ${problem.difficulty}`.toLocaleLowerCase();
+      return matchesDifficulty && searchableText.includes(query);
+    });
+    if(count) count.textContent = visibleProblems.length;
+    box.innerHTML = visibleProblems.length ? visibleProblems.map(problem=>`
+      <a class="problem-item" href="https://www.luogu.com.cn/problem/${problem.pid}" target="_blank" rel="noopener">
+        <span class="pid">${problem.pid}</span>
+        <span class="p-title">${problem.title}</span>
+        <span class="difficulty diff-${problem.difficulty}">${problem.difficulty}</span>
+        <span class="problem-arrow" aria-hidden="true">↗</span>
+      </a>`).join("") : '<div class="empty-state">没有找到匹配的题目，试试其他关键词或难度。</div>';
+  }
+
+  if(search) search.addEventListener("input", update);
+  update();
 }
 
 function renderMembers(){
   const grid = document.getElementById("member-grid");
   if(!grid) return;
-  grid.innerHTML = members.map((m,i)=>`
-    <div class="member-card" onclick="openMember(${i})">
-      <div class="avatar" style="background:${avatarColor(m)}">${m.name[0]}</div>
-      <div class="m-name">${m.name}</div>
-      <div class="m-role">${m.role}</div>
-    </div>`).join("");
+  const search = document.getElementById("member-search");
+  const count = document.getElementById("member-count");
+
+  function update(){
+    const query = search ? search.value.trim().toLocaleLowerCase() : "";
+    const visibleMembers = members.map((member, index) => ({member, index})).filter(({member}) =>
+      `${member.name} ${member.role}`.toLocaleLowerCase().includes(query)
+    );
+    if(count) count.textContent = visibleMembers.length;
+    grid.innerHTML = visibleMembers.length ? visibleMembers.map(({member, index})=>`
+      <button class="member-card" type="button" onclick="openMember(${index})" aria-label="查看${member.name}的成员介绍">
+        <span class="avatar" style="background:${avatarColor(member)}">${member.name[0]}</span>
+        <span class="m-name">${member.name}</span>
+        <span class="m-role">${member.role}</span>
+        <span class="m-card-hint">查看介绍 <span aria-hidden="true">→</span></span>
+      </button>`).join("") : '<div class="empty-state">没有找到匹配的成员，试试其他关键词。</div>';
+  }
+
+  if(search) search.addEventListener("input", update);
+  update();
 }
+
+let lastFocusedElement = null;
 
 function openMember(i){
   const m = members[i];
+  if(!m) return;
+  lastFocusedElement = document.activeElement;
   const av = document.getElementById("m-avatar");
   av.textContent = m.name[0];
   av.style.background = avatarColor(m);
@@ -185,10 +237,39 @@ function openMember(i){
     link.style.display = "none";
     document.getElementById("m-uid").textContent = "";
   }
-  document.getElementById("modal-mask").classList.add("open");
+  const mask = document.getElementById("modal-mask");
+  mask.classList.add("open");
+  mask.setAttribute("aria-hidden", "false");
+  mask.querySelector(".close").focus();
 }
-function closeModal(){ document.getElementById("modal-mask").classList.remove("open"); }
-document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeModal(); });
+function closeModal(){
+  const mask = document.getElementById("modal-mask");
+  if(!mask || !mask.classList.contains("open")) return;
+  mask.classList.remove("open");
+  mask.setAttribute("aria-hidden", "true");
+  if(lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
+}
+document.addEventListener("keydown", event=>{
+  const mask = document.getElementById("modal-mask");
+  if(!mask || !mask.classList.contains("open")) return;
+  if(event.key === "Escape"){
+    closeModal();
+    return;
+  }
+  if(event.key === "Tab"){
+    const focusable = [...mask.querySelectorAll("button:not([disabled]), a[href]")].filter(element => element.getClientRects().length);
+    if(focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if(event.shiftKey && document.activeElement === first){
+      event.preventDefault();
+      last.focus();
+    } else if(!event.shiftKey && document.activeElement === last){
+      event.preventDefault();
+      first.focus();
+    }
+  }
+});
 
 renderIntro();
 renderHomeStats();
